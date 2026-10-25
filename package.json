@@ -1,0 +1,25 @@
+{
+  "name": "taste-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/server",
+    "apps/devvit"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "npm run build -w @taste/qloo && npm run build -w @taste/server && npm run build -w @taste/devvit",
+    "dev": "npm run dev -w @taste/server",
+    "start": "npm run start -w @taste/server",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

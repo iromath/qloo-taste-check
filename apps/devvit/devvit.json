@@ -1,0 +1,79 @@
+{
+  "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
+  "name": "taste-check",
+  "permissions": {
+    "http": {
+      "enable": true,
+      "domains": [
+        "hackathon.api.qloo.com"
+      ]
+    },
+    "redis": true,
+    "reddit": true
+  },
+  "post": {
+    "dir": "public",
+    "entrypoints": {
+      "default": {
+        "entry": "index.html"
+      },
+      "game": {
+        "entry": "game.html",
+        "height": "tall"
+      },
+      "dashboard": {
+        "entry": "dashboard.html",
+        "height": "regular"
+      }
+    }
+  },
+  "server": {
+    "dir": "dist/server",
+    "entry": "index.cjs"
+  },
+  "menu": {
+    "items": [
+      {
+        "label": "Start a Taste Check round",
+        "description": "Build today's round from the hot posts in this subreddit.",
+        "location": "subreddit",
+        "endpoint": "/internal/menu/new-round",
+        "forUserType": "moderator"
+      },
+      {
+        "label": "Create the Taste Check dashboard post",
+        "description": "Posts the moderator-only stats view in this subreddit.",
+        "location": "subreddit",
+        "endpoint": "/internal/menu/dashboard-post",
+        "forUserType": "moderator"
+      }
+    ]
+  },
+  "scheduler": {
+    "tasks": {
+      "daily-round": {
+        "endpoint": "/internal/cron/daily-round",
+        "cron": "0 14 * * *"
+      }
+    }
+  },
+  "triggers": {
+    "onAppInstall": "/internal/triggers/install"
+  },
+  "settings": {
+    "global": {
+      "qlooApiKey": {
+        "type": "string",
+        "label": "Qloo API key",
+        "helpText": "Key for https://hackathon.api.qloo.com. Stored as a secret; never shipped to the client.",
+        "isSecret": true
+      }
+    }
+  },
+  "scripts": {
+    "build": "esbuild src/server/index.ts --bundle --platform=node --format=cjs --target=node20 --outfile=dist/server/index.cjs"
+  },
+  "dev": {
+    "subreddit": "taste_check_dev"
+  }
+}

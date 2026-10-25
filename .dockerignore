@@ -1,0 +1,11 @@
+.git
+.gitignore
+**/node_modules
+**/dist
+research
+fixtures
+.env
+.env.*
+*.local.json
+README.md
+PLAN.md

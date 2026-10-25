@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Taste Check — Dashboard</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand"><span class="dot"></span> Taste Check</div>
+    <span class="pill" id="status">loading</span>
+  </div>
+
+  <p class="kicker">Moderator view</p>
+  <h1>How the community reads the graph</h1>
+  <p class="sub" id="sub">Aggregate accuracy and the cards that keep fooling everyone.</p>
+
+  <div id="view" class="hidden">
+    <div class="kpis">
+      <div class="kpi"><b id="k-rounds">0</b><span>rounds</span></div>
+      <div class="kpi"><b id="k-votes">0</b><span>votes</span></div>
+      <div class="kpi"><b id="k-acc">0%</b><span>accuracy</span></div>
+      <div class="kpi"><b id="k-players">0</b><span>players</span></div>
+    </div>
+
+    <div class="section">
+      <h2>Verdict mix</h2>
+      <div class="mix" id="mix"></div>
+    </div>
+
+    <div class="section">
+      <h2>Hardest cards</h2>
+      <div class="board" id="hardest"></div>
+    </div>
+
+    <div class="section">
+      <h2>Top players</h2>
+      <div class="board" id="board"></div>
+    </div>
+  </div>
+
+  <div class="err hidden" id="err"></div>
+  <p class="note">Stats are per-installation and live in Devvit Redis. No per-user data leaves the app.</p>
+</div>
+
+<script>
+(function () {
+  var COLORS = { LOVE: '#4ade80', MEH: '#facc15', PASS: '#94a3b8' };
+  var el = function (id) { return document.getElementById(id); };
+  function show(node) { node.classList.remove('hidden'); }
+
+  function fail(message) {
+    el('err').textContent = message;
+    show(el('err'));
+    el('status').textContent = 'restricted';
+    el('status').className = 'pill warn';
+    el('sub').textContent = 'This page is visible to moderators only.';
+  }
+
+  function pct(value) { return Math.round(value * 100) + '%'; }
+
+  function renderBoard(container, rows) {
+    container.innerHTML = '';
+    if (!rows || rows.length === 0) {
+      container.innerHTML = '<div class="empty">No scores yet.</div>';
+      return;
+    }
+    rows.forEach(function (row, index) {
+      var div = document.createElement('div');
+      div.className = 'row';
+      div.innerHTML =
+        '<span class="rank">' + (index + 1) + '</span>' +
+        '<span class="who">' + row.player + '</span>' +
+        '<span class="pts">' + row.score + ' · ' + row.rounds + 'r</span>';
+      container.appendChild(div);
+    });
+  }
+
+  async function load() {
+    try {
+      var res = await fetch('/api/dashboard');
+      var body = await res.json().catch(function () { return null; });
+      if (!res.ok) {
+        throw new Error(body && body.error ? body.error.message : 'Request failed (' + res.status + ')');
+      }
+
+      el('k-rounds').textContent = body.rounds;
+      el('k-votes').textContent = body.votes;
+      el('k-acc').textContent = pct(body.accuracy);
+      el('k-players').textContent = body.players;
+
+      var total = body.verdictMix.reduce(function (sum, row) { return sum + row.count; }, 0);
+      var mix = el('mix');
+      mix.innerHTML = '';
+      body.verdictMix.forEach(function (row) {
+        var share = total === 0 ? 0 : row.count / total;
+        var wrapper = document.createElement('div');
+        wrapper.className = 'mix-row';
+        wrapper.innerHTML =
+          '<div class="lab"><span>' + row.verdict + '</span><span>' + row.count + '</span></div>' +
+          '<div class="bar"><i style="width:' + Math.round(share * 100) + '%;background:' + COLORS[row.verdict] + '"></i></div>';
+        mix.appendChild(wrapper);
+      });
+
+      var hardest = el('hardest');
+      hardest.innerHTML = '';
+      if (!body.hardest || body.hardest.length === 0) {
+        hardest.innerHTML = '<div class="empty">No misses recorded yet.</div>';
+      } else {
+        body.hardest.forEach(function (row) {
+          var div = document.createElement('div');
+          div.className = 'row';
+          div.innerHTML =
+            '<span class="rank">' + row.misses + '</span>' +
+            '<span class="who">' + row.name + '</span>' +
+            '<span class="pts">' + (row.shown ? Math.round((row.misses / row.shown) * 100) : 0) + '% missed</span>';
+          hardest.appendChild(div);
+        });
+      }
+
+      renderBoard(el('board'), body.leaderboard);
+      el('status').textContent = 'live';
+      el('status').className = 'pill ok';
+      show(el('view'));
+    } catch (error) {
+      fail(error.message);
+    }
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>
