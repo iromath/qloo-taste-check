@@ -19,5 +19,5 @@
     "devvit": "0.15.0",
     "esbuild": "^0.28.2"
   },
-  "license": "BSD-3-Clause"
+  "license": "MIT"
 }

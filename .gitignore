@@ -16,3 +16,6 @@ coverage/
 
 # Devvit
 apps/devvit/.devvit/
+
+# Local handoff notes (not part of the public submission)
+MEMORY.md
