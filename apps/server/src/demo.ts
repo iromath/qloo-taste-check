@@ -239,6 +239,22 @@ export function renderDemoPage(origin: string, ready: boolean): string {
     return 'PASS';
   }
 
+  // Qloo returns influence as per-seed shares of a top-N bucket, keyed by entity
+  // ID. Resolve them against the profile hits so the page can name the seeds.
+  function renderInfluence(influences, names) {
+    const groups = influences || {};
+    const keys = Object.keys(groups).filter((key) => Array.isArray(groups[key]) && groups[key].length);
+    if (!keys.length) return '';
+    // Backslashes are doubled because this script lives inside a template literal.
+    const key = keys.find((k) => /[.]top3$/.test(k)) || keys[0];
+    const slice = /[.](top[0-9]+|all)$/.exec(key);
+    const label = slice ? slice[1].replace(/^top([0-9]+)$/, 'top $1') : 'results';
+    const parts = groups[key].slice(0, 4).map((item) =>
+      esc(names[item.entityId] || item.entityId) + ' ' + Math.round(Number(item.score) * 100) + '%'
+    );
+    return '<p class="note">Seed influence on the ' + esc(label) + ': ' + parts.join(' · ') + '</p>';
+  }
+
   function renderError(payload) {
     const err = (payload && payload.error) || {};
     return '<div class="warnbox"><strong>' + esc(err.kind || 'error') + '</strong> — ' + esc(err.message || 'Request failed') +
@@ -290,6 +306,8 @@ export function renderDemoPage(origin: string, ready: boolean): string {
     try {
       const profile = await getJson('/api/profile', { likes: likes });
       const anchors = (profile.profile && profile.profile.anchors) || [];
+      const names = {};
+      (profile.hits || []).forEach((hit) => { if (hit && hit.id) names[hit.id] = hit.name || hit.id; });
       if (!anchors.length) {
         out.innerHTML = renderError({
           error: {
@@ -327,8 +345,11 @@ export function renderDemoPage(origin: string, ready: boolean): string {
       }).join('');
 
       const meta = 'cache ' + esc(rec.cache) + ' · ' + esc(rec.latency_ms) + ' ms · ' + anchors.length + ' anchor(s)';
-      out.innerHTML = rows + '<p class="note">' + meta + '</p>' +
-        ((rec.warnings || []).length ? '<div class="warnbox" style="margin-top:10px">' + esc(rec.warnings.join(' ')) + '</div>' : '');
+      // The aggregate-bucket warning tells an MCP agent to read the influences
+      // field; the page renders those shares, so it would only read as noise here.
+      const warnings = (rec.warnings || []).filter((w) => !/aggregate influence/i.test(w));
+      out.innerHTML = rows + renderInfluence(rec.influences, names) + '<p class="note">' + meta + '</p>' +
+        (warnings.length ? '<div class="warnbox" style="margin-top:10px">' + esc(warnings.join(' ')) + '</div>' : '');
     } catch (error) {
       out.innerHTML = renderError(error);
     } finally {
