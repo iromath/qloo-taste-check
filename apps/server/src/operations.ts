@@ -1,16 +1,20 @@
 import {
+  normalizeAudiences,
   normalizeCompare,
   normalizeEntities,
   normalizeTags,
   normalizeTrending,
+  normalizeTypeNodes,
   readAggregateExplainability,
   reasonFor,
   verdictFor,
   type CacheState,
   type CompareItem,
   type ExplainContribution,
+  type QlooAudience,
   type QlooEntity,
   type QlooTag,
+  type QlooTypeNode,
   type SearchType,
   type TrendPoint,
   type Verdict,
@@ -20,8 +24,11 @@ import { ToolInputError, requireQloo } from './context.js';
 import type {
   CompareInput,
   ExplainInput,
+  GetEntitiesInput,
+  ListTypesInput,
   ProfileInput,
   RecommendInput,
+  SearchAudiencesInput,
   SearchEntitiesInput,
   SearchTagsInput,
   TrendingInput,
@@ -36,9 +43,9 @@ export type TasteProfile = {
 };
 
 export type ToolEnvelope = {
-  kind: 'entity' | 'tag' | 'trend' | 'compare';
+  kind: 'entity' | 'tag' | 'trend' | 'compare' | 'audience' | 'type';
   /** Ranked result list. Absent for `compare`, which returns three buckets. */
-  hits?: QlooEntity[] | QlooTag[] | TrendPoint[];
+  hits?: QlooEntity[] | QlooTag[] | TrendPoint[] | QlooAudience[] | QlooTypeNode[];
   warnings: string[];
   cache: CacheState;
   latency_ms: number;
@@ -127,14 +134,82 @@ export async function searchTags(ctx: AppContext, input: SearchTagsInput): Promi
   };
 }
 
+/** IDs -> full entity records. The reverse of a search. */
+export async function getEntities(ctx: AppContext, input: GetEntitiesInput): Promise<ToolEnvelope> {
+  const client = requireQloo(ctx);
+  const { data, meta } = await client.entities({ ids: input.ids });
+  const { items, warnings } = normalizeEntities(data);
+
+  return {
+    kind: 'entity',
+    hits: items,
+    warnings: mergeWarnings(meta.warnings, warnings),
+    cache: meta.cache,
+    latency_ms: meta.latencyMs,
+    next: items.length
+      ? ['These IDs are valid seeds: pass them to qloo_recommend, qloo_compare_tastes or qloo_explain.']
+      : ['Qloo rejects unknown IDs with HTTP 400, so an empty list means the IDs resolved to nothing. Re-run qloo_search_entities.'],
+  };
+}
+
+/** Audiences — the demographic/lifestyle signal behind `signal.demographics.audiences`. */
+export async function searchAudiences(ctx: AppContext, input: SearchAudiencesInput): Promise<ToolEnvelope> {
+  const client = requireQloo(ctx);
+  const { data, meta } = await client.audiences({
+    query: input.query,
+    parentTypes: input.parentTypes,
+    audienceTypes: input.audienceTypes,
+    take: input.take ?? 20,
+  });
+  const { items, warnings } = normalizeAudiences(data);
+
+  return {
+    kind: 'audience',
+    hits: items,
+    warnings: mergeWarnings(meta.warnings, warnings),
+    cache: meta.cache,
+    latency_ms: meta.latencyMs,
+    next: items.length
+      ? ['Use an audience `entityId` (UUID, not the `id` slug) as `audiences` on qloo_recommend.']
+      : ['Try a broader `query`, or drop `audienceTypes` — audience type values come from qloo_list_types with kind: "audience".'],
+  };
+}
+
+/** The tag or audience taxonomy, so callers stop guessing `filter.*.types` values. */
+export async function listTypes(ctx: AppContext, input: ListTypesInput): Promise<ToolEnvelope> {
+  const client = requireQloo(ctx);
+  const kind = input.kind ?? 'tag';
+  const params = { type: input.type, parentTypes: input.parentTypes };
+  const { data, meta } = kind === 'audience'
+    ? await client.audienceTypes(params)
+    : await client.tagTypes(params);
+  const { items, warnings } = normalizeTypeNodes(data, kind === 'audience' ? 'audience_types' : 'tag_types');
+
+  return {
+    kind: 'type',
+    hits: items,
+    warnings: mergeWarnings(meta.warnings, warnings),
+    cache: meta.cache,
+    latency_ms: meta.latencyMs,
+    next: items.length
+      ? [
+          kind === 'audience'
+            ? 'Pass a `type` value to qloo_search_audiences as `audienceTypes`.'
+            : 'Pass a `type` value to qloo_search_tags as `tagTypes`, or to qloo_recommend as `diversifyBy`.',
+        ]
+      : ['No types matched. Drop `type` to list the full taxonomy for one `parentTypes` value.'],
+  };
+}
+
 /** Core recommendation call: taste profile -> ranked entities. */
 export async function recommend(ctx: AppContext, input: RecommendInput): Promise<ToolEnvelope> {
   const entities = input.entities ?? [];
   const tags = input.tags ?? [];
-  if (entities.length === 0 && tags.length === 0) {
+  const audiences = input.audiences ?? [];
+  if (entities.length === 0 && tags.length === 0 && audiences.length === 0) {
     throw new ToolInputError(
-      'A recommendation needs at least one seed entity or tag.',
-      'Resolve names first: qloo_search_entities for entities, qloo_search_tags for concepts.',
+      'A recommendation needs at least one seed entity, tag or audience.',
+      'Resolve names first: qloo_search_entities for entities, qloo_search_tags for concepts, qloo_search_audiences for groups.',
     );
   }
 
@@ -145,6 +220,7 @@ export async function recommend(ctx: AppContext, input: RecommendInput): Promise
     type: input.type,
     entities,
     tags,
+    audiences,
     take,
     sortBy: input.sortBy,
     filterTags: input.filterTags,

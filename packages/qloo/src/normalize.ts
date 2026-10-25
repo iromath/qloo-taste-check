@@ -8,7 +8,7 @@
  * dropped rather than forwarded.
  */
 
-import type { ExplainContribution, QlooEnvelope, QlooEntity, QlooTag } from './types.js';
+import type { ExplainContribution, QlooAudience, QlooEnvelope, QlooEntity, QlooTag, QlooTypeNode } from './types.js';
 
 export type Normalized<T> = {
   items: T[];
@@ -69,7 +69,9 @@ export function normalizeEntities(data: QlooEnvelope, opts: { explainability?: b
     if (!id || seen.has(id)) continue;
     seen.add(id);
 
-    const subtype = asString(entry.subtype) ?? asString(entry.type) ?? '';
+    // /search and /entities return `types: ["urn:entity:movie"]`; /v2/insights
+    // returns `subtype`. Read both so search hits are not typeless.
+    const subtype = asString(entry.subtype) ?? firstString(entry.types) ?? asString(entry.type) ?? '';
     const query = isObject(entry.query) ? entry.query : {};
     // Per-result shape: query.explainability["signal.interests.entities"] = [{ entity_id, score }].
     // Never pass the whole query object: it also holds `affinity`, which looks numeric.
@@ -127,6 +129,104 @@ export function normalizeTags(data: QlooEnvelope): Normalized<QlooTag> {
 
   if (items.length === 0) warnings.push(emptyWarning(data));
   return { items, warnings };
+}
+
+/**
+ * Normalize `results.audiences` from /v2/audiences.
+ *
+ * Verified shape: each entry carries both `entity_id` (the UUID that
+ * `signal.demographics.audiences` expects) and `id` (a slug such as
+ * `urn:audience:leisure:music_festivals`).
+ */
+export function normalizeAudiences(data: QlooEnvelope): Normalized<QlooAudience> {
+  const warnings: string[] = [];
+  const raw = collectArray(data, 'audiences');
+
+  if (raw.length === 0) {
+    warnings.push(emptyWarning(data));
+    return { items: [], warnings };
+  }
+
+  const seen = new Set<string>();
+  const items: QlooAudience[] = [];
+
+  for (const entry of raw) {
+    const entityId = asString(entry.entity_id) ?? asString(entry.id);
+    if (!entityId || seen.has(entityId)) continue;
+    seen.add(entityId);
+    items.push({
+      entityId,
+      id: asString(entry.id) ?? entityId,
+      name: asString(entry.name) ?? entityId,
+      type: asString(entry.type),
+      parents: readAudienceParents(entry.parents),
+      disambiguation: asString(entry.disambiguation),
+    });
+  }
+
+  if (items.length === 0) warnings.push(emptyWarning(data));
+  return { items, warnings };
+}
+
+/**
+ * Normalize /v2/tags/types (`results.tag_types`) or /v2/audiences/types
+ * (`results.audience_types`). Both are lists of `{ type, parents }`.
+ */
+export function normalizeTypeNodes(
+  data: QlooEnvelope,
+  bucket: 'tag_types' | 'audience_types',
+): Normalized<QlooTypeNode> {
+  const warnings: string[] = [];
+  const raw = collectArray(data, bucket);
+
+  if (raw.length === 0) {
+    warnings.push(emptyWarning(data));
+    return { items: [], warnings };
+  }
+
+  const seen = new Set<string>();
+  const items: QlooTypeNode[] = [];
+
+  for (const entry of raw) {
+    const type = asString(entry.type);
+    if (!type || seen.has(type)) continue;
+    seen.add(type);
+    items.push({ type, parents: readTypeParents(entry.parents) });
+  }
+
+  if (items.length === 0) warnings.push(emptyWarning(data));
+  return { items, warnings };
+}
+
+function readAudienceParents(value: unknown): QlooAudience['parents'] {
+  if (!Array.isArray(value)) return [];
+  const out: QlooAudience['parents'] = [];
+  for (const entry of value) {
+    if (typeof entry === 'string') {
+      out.push({ type: entry });
+      continue;
+    }
+    if (!isObject(entry)) continue;
+    const type = asString(entry.type);
+    if (!type) continue;
+    out.push({ type, id: asString(entry.id), name: asString(entry.name) });
+  }
+  return out;
+}
+
+function readTypeParents(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const out: string[] = [];
+  for (const entry of value) {
+    if (typeof entry === 'string') {
+      out.push(entry);
+      continue;
+    }
+    if (!isObject(entry)) continue;
+    const type = asString(entry.type);
+    if (type) out.push(type);
+  }
+  return out;
 }
 
 /**
@@ -352,6 +452,10 @@ function emptyWarning(data: QlooEnvelope): string {
 
 function asString(value: unknown): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function firstString(value: unknown): string | undefined {
+  return Array.isArray(value) ? value.map(asString).find((item) => item !== undefined) : undefined;
 }
 
 function asNumber(value: unknown): number | undefined {

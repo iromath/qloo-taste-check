@@ -132,7 +132,7 @@ export function renderDemoPage(origin: string, ready: boolean): string {
     <div class="kicker">Qloo Agentic Hackathon</div>
     <h1>Cultural taste, <em>as tools</em> an agent can actually use.</h1>
     <p class="lede">
-      A self-hosted Model Context Protocol server over Qloo's taste graph. Seven tools, three reference
+      A self-hosted Model Context Protocol server over Qloo's taste graph. Ten tools, three reference
       resources, two prompts — all sharing one validated client, so an agent resolves IDs first and
       never invents a recommendation.
     </p>
@@ -186,12 +186,15 @@ export function renderDemoPage(origin: string, ready: boolean): string {
   </section>
 
   <section>
-    <h2>Seven tools</h2>
+    <h2>Ten tools</h2>
     <table>
       <thead><tr><th>Tool</th><th>What it does</th></tr></thead>
       <tbody>
         <tr><td><code>qloo_search_entities</code></td><td>Name → Qloo entity IDs, with type, location and radius filters.</td></tr>
         <tr><td><code>qloo_search_tags</code></td><td>Concept → Qloo tag IDs. Tag names are not tag IDs.</td></tr>
+        <tr><td><code>qloo_get_entities</code></td><td>Entity IDs → names and tags. Re-hydrate IDs you already hold.</td></tr>
+        <tr><td><code>qloo_search_audiences</code></td><td>Description → audience UUIDs, usable as a demographic taste signal.</td></tr>
+        <tr><td><code>qloo_list_types</code></td><td>The tag and audience taxonomy behind every type filter.</td></tr>
         <tr><td><code>qloo_recommend</code></td><td>Ranked recommendations from seeded IDs, with optional tags and explainability.</td></tr>
         <tr><td><code>qloo_compare_tastes</code></td><td>Two profiles, one entity type: where tastes converge and diverge.</td></tr>
         <tr><td><code>qloo_trending</code></td><td>Popularity trend for an entity type over a date window.</td></tr>

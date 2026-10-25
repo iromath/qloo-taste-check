@@ -6,7 +6,10 @@ import {
   buildTasteProfile,
   compareTastes,
   explain,
+  getEntities,
+  listTypes,
   recommend,
+  searchAudiences,
   searchEntities,
   searchTags,
   trending,
@@ -15,8 +18,11 @@ import {
 import {
   compareShape,
   explainShape,
+  getEntitiesShape,
+  listTypesShape,
   profileShape,
   recommendShape,
+  searchAudiencesShape,
   searchEntitiesShape,
   searchTagsShape,
   trendingShape,
@@ -56,11 +62,53 @@ export function registerTools(server: McpServer, ctx: AppContext): void {
   );
 
   server.registerTool(
+    'qloo_get_entities',
+    {
+      title: 'Fetch Qloo entities by ID',
+      description:
+        `${PREAMBLE}\n\nThe reverse of a search: turn entity IDs you already hold back into names, types and tags. ` +
+        'Useful for re-hydrating IDs from an earlier turn, a stored profile or a URL. `/entities` is the one endpoint that wants bare UUIDs — ' +
+        'URN-form IDs such as `urn:entity:movie:<uuid>` are reduced automatically.',
+      inputSchema: getEntitiesShape,
+      annotations: READ_ONLY,
+    },
+    (input) => run(() => getEntities(ctx, input)),
+  );
+
+  server.registerTool(
+    'qloo_search_audiences',
+    {
+      title: 'Search Qloo audiences',
+      description:
+        `${PREAMBLE}\n\nResolve a description ("music festival regulars", "sneakerheads") to Qloo audience IDs. An audience is a demographic or ` +
+        'lifestyle group, not an entity: pass its `entityId` (a UUID, not the `id` slug) as `audiences` on qloo_recommend to nudge the taste signal ' +
+        'toward that group. Get valid `audienceTypes` values from qloo_list_types with kind: "audience".',
+      inputSchema: searchAudiencesShape,
+      annotations: READ_ONLY,
+    },
+    (input) => run(() => searchAudiences(ctx, input)),
+  );
+
+  server.registerTool(
+    'qloo_list_types',
+    {
+      title: 'List Qloo tag or audience types',
+      description:
+        `${PREAMBLE}\n\nThe taxonomy behind every filter.*.types parameter. Returns { type, parents } rows: \`type\` is the value to send ` +
+        '(e.g. `urn:tag:genre:qloo`, `urn:audience:leisure`) and `parents` are the entity types it applies to. Filter with `parentTypes` to see ' +
+        'only the types valid for movies, artists, places and so on. Use kind: "audience" for audience types, "tag" (default) for tag types.',
+      inputSchema: listTypesShape,
+      annotations: READ_ONLY,
+    },
+    (input) => run(() => listTypes(ctx, input)),
+  );
+
+  server.registerTool(
     'qloo_recommend',
     {
       title: 'Recommend from a taste profile',
       description:
-        `${PREAMBLE}\n\nReturn ranked entities of one type from seed entity IDs and/or tag IDs. Hits are sorted by Qloo affinity, ` +
+        `${PREAMBLE}\n\nReturn ranked entities of one type from seed entity IDs, tag IDs and/or audience IDs. Hits are sorted by Qloo affinity, ` +
         'returned per result as `affinity` (0–1), so hits[0] is the strongest match. Keep `explain: true` to get contributor scores for each result. ' +
         'Only these types are valid: artist, book, brand, destination, movie, person, place, podcast, tv_show (anything else returns HTTP 400).',
       inputSchema: recommendShape,

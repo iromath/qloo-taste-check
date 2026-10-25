@@ -74,7 +74,27 @@ The two radius units are a real trap: the same number means very different thing
 - /v2/tags: default 20, documented max 50.
 - /v2/trending: \`take\` 1–50; requires \`filter.type\`, \`filter.start_date\`, \`filter.end_date\` **and** a seed entity, and needs a window of several months to return points.
 - /v2/analysis/compare: requires both \`a.signal.interests.entities\` and \`b.signal.interests.entities\` as single comma-joined values; repeated keys return 400.
-- /entities: the ID parameter is \`entity_ids\`.
+- /entities: the ID parameter is \`entity_ids\`, and it takes **bare UUIDs only** (comma-joined). A URN such as \`urn:entity:movie:<uuid>\` returns \`400 "entity_ids should be an array of valid UUIDs"\`.
+- /v2/audiences: parameters are \`filter.query\`, \`filter.parents.types\`, \`filter.audience.types\`, \`filter.results.audiences\`, \`filter.popularity.min\`/\`max\`; \`take\` defaults to 20 and maxes at 50. Each result carries \`entity_id\` (the UUID that \`signal.demographics.audiences\` expects) **and** a slug \`id\` such as \`urn:audience:leisure:music_festivals\` — the two are not interchangeable.
+- /v2/tags/types and /v2/audiences/types: filter with \`filter.type\` and \`filter.parents.types\`; rows are \`{ type, parents }\`, where \`parents\` lists the entity types the type applies to.
+
+## Audiences
+
+Audiences are groups, not entities. Use them as a **taste signal**, not a result filter:
+
+| parameter | meaning |
+|---|---|
+| \`signal.demographics.audiences\` | comma-joined audience **UUIDs** |
+| \`filter.audience.types\` | restrict /v2/audiences to audience types, e.g. \`urn:audience:leisure\` |
+
+Send the \`entity_id\` from /v2/audiences, not the \`id\` slug. \`urn:audience:leisure:music_festivals\` is rejected where a UUID is expected.
+
+## Taxonomies
+
+\`filter.tag.types\` and \`filter.audience.types\` only accept values that exist. List them rather than guessing:
+
+- \`/v2/tags/types\` returns 20 tag types, e.g. \`urn:tag:genre:qloo\`. Add \`filter.parents.types=urn:entity:movie\` to see only the types valid for films.
+- \`/v2/audiences/types\` returns 10 audience types, e.g. \`urn:audience:leisure\`.
 `;
 
 const TAG_WORKFLOW = `# Tag workflow

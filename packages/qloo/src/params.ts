@@ -208,6 +208,71 @@ export function buildTagsQuery(p: TagsParams): QlooQuery {
   });
 }
 
+export type EntitiesParams = {
+  /** Qloo entity IDs — bare UUIDs, or URNs that get reduced to their UUID. */
+  ids: string[];
+  extra?: QlooQuery;
+};
+
+/**
+ * `/entities` is the only endpoint that rejects URNs: it wants bare UUIDs in a
+ * single comma-joined `entity_ids` value. `entity_ids[]=` is silently ignored.
+ */
+export function buildEntitiesQuery(p: EntitiesParams): QlooQuery {
+  return compact({
+    entity_ids: p.ids.map(bareUuid).join(','),
+    ...p.extra,
+  });
+}
+
+export type AudiencesParams = {
+  /** Free-text search across audience names and descriptions. */
+  query?: string;
+  /** Entity types the audience applies to, e.g. `urn:entity:movie`. */
+  parentTypes?: string[];
+  /** Audience types, e.g. `urn:audience:leisure`. */
+  audienceTypes?: string[];
+  /** Narrow to audiences matching these terms. */
+  resultsQuery?: string;
+  minPopularity?: number;
+  maxPopularity?: number;
+  page?: number;
+  /** Default 20, maximum 50. */
+  take?: number;
+  extra?: QlooQuery;
+};
+
+export function buildAudiencesQuery(p: AudiencesParams): QlooQuery {
+  return compact({
+    'filter.query': p.query,
+    'filter.parents.types': joinList(p.parentTypes),
+    'filter.audience.types': joinList(p.audienceTypes),
+    'filter.results.audiences': p.resultsQuery,
+    'filter.popularity.min': clamp(p.minPopularity, 0, 1),
+    'filter.popularity.max': clamp(p.maxPopularity, 0, 1),
+    page: p.page,
+    take: clamp(p.take, 1, TAGS_TAKE_MAX),
+    ...p.extra,
+  });
+}
+
+export type TypeListParams = {
+  /** Restrict to one type, e.g. `urn:tag:genre:qloo` or `urn:audience:leisure`. */
+  type?: string;
+  /** Restrict to types that apply to these entity types. */
+  parentTypes?: string[];
+  extra?: QlooQuery;
+};
+
+/** Shared by `/v2/tags/types` and `/v2/audiences/types`. */
+export function buildTypeListQuery(p: TypeListParams): QlooQuery {
+  return compact({
+    'filter.type': p.type,
+    'filter.parents.types': joinList(p.parentTypes),
+    ...p.extra,
+  });
+}
+
 export type TrendingParams = {
   type: InsightsType;
   /** ISO 8601 date. Required. */
@@ -267,6 +332,12 @@ function compact(q: QlooQuery): QlooQuery {
     out[key] = value;
   }
   return out;
+}
+
+/** `urn:entity:movie:<uuid>` -> `<uuid>`; already-bare UUIDs pass through. */
+export function bareUuid(id: string): string {
+  const parts = id.split(':');
+  return parts.length > 1 ? (parts[parts.length - 1] ?? id) : id;
 }
 
 function clamp(value: number | undefined, min: number, max: number): number | undefined {

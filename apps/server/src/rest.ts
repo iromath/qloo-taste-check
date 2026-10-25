@@ -8,7 +8,10 @@ import {
   buildTasteProfile,
   compareTastes,
   explain,
+  getEntities,
+  listTypes,
   recommend,
+  searchAudiences,
   searchEntities,
   searchTags,
   trending,
@@ -17,8 +20,11 @@ import {
 import {
   compareShape,
   explainShape,
+  getEntitiesShape,
+  listTypesShape,
   profileShape,
   recommendShape,
+  searchAudiencesShape,
   searchEntitiesShape,
   searchTagsShape,
   trendingShape,
@@ -32,7 +38,18 @@ export function createApi(ctx: AppContext): Hono {
     c.json({
       entityTypes: [...INSIGHTS_TYPES],
       searchOnlyTypes: [...SEARCH_ONLY_TYPES],
-      tools: ['qloo_search_entities', 'qloo_search_tags', 'qloo_recommend', 'qloo_compare_tastes', 'qloo_trending', 'qloo_build_taste_profile', 'qloo_explain'],
+      tools: [
+        'qloo_search_entities',
+        'qloo_search_tags',
+        'qloo_get_entities',
+        'qloo_search_audiences',
+        'qloo_list_types',
+        'qloo_recommend',
+        'qloo_compare_tastes',
+        'qloo_trending',
+        'qloo_build_taste_profile',
+        'qloo_explain',
+      ],
       mcpEndpoint: '/mcp',
     }),
   );
@@ -65,6 +82,41 @@ export function createApi(ctx: AppContext): Hono {
     }),
   );
 
+  api.get('/entities', (c) =>
+    handle(c, async () => {
+      const q = query(c);
+      const input = parse(getEntitiesShape, {
+        ids: q.list('ids') ?? q.list('id'),
+      });
+      return getEntities(ctx, input);
+    }),
+  );
+
+  api.get('/audiences', (c) =>
+    handle(c, async () => {
+      const q = query(c);
+      const input = parse(searchAudiencesShape, {
+        query: q.str('query') ?? q.str('q'),
+        parentTypes: q.list('parentTypes'),
+        audienceTypes: q.list('audienceTypes'),
+        take: q.num('take'),
+      });
+      return searchAudiences(ctx, input);
+    }),
+  );
+
+  api.get('/types', (c) =>
+    handle(c, async () => {
+      const q = query(c);
+      const input = parse(listTypesShape, {
+        kind: q.str('kind'),
+        type: q.str('type'),
+        parentTypes: q.list('parentTypes'),
+      });
+      return listTypes(ctx, input);
+    }),
+  );
+
   api.get('/recommend', (c) =>
     handle(c, async () => {
       const q = query(c);
@@ -72,6 +124,7 @@ export function createApi(ctx: AppContext): Hono {
         type: q.str('type'),
         entities: q.list('entities'),
         tags: q.list('tags'),
+        audiences: q.list('audiences'),
         take: q.num('take'),
         explain: q.bool('explain'),
         sortBy: q.str('sortBy'),

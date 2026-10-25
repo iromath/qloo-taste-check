@@ -3,7 +3,7 @@
 Two surfaces over one taste engine built on the [Qloo](https://hackathon.api.qloo.com) cultural
 intelligence API:
 
-- **`apps/server`** — a self-hosted **MCP server** that exposes Qloo as seven agent tools (plus
+- **`apps/server`** — a self-hosted **MCP server** that exposes Qloo as ten agent tools (plus
   resources and prompts) over Streamable HTTP, with a small REST facade and a browser demo.
 - **`apps/devvit`** — **Taste Check**, a Reddit app built on [Devvit](https://developers.reddit.com/docs)
   that turns a subreddit's own front page into a daily taste-guessing game, with a moderator dashboard.
@@ -86,7 +86,10 @@ prefix in the endpoint URL confuses most of them.
 | --- | --- |
 | `qloo_search_entities` | Resolve free text to Qloo entity IDs |
 | `qloo_search_tags` | Resolve free text to tag IDs |
-| `qloo_recommend` | Rank entities for a known set of seed entities or tags |
+| `qloo_get_entities` | Resolve entity IDs back to names, types and tags |
+| `qloo_search_audiences` | Resolve a group description to audience UUIDs |
+| `qloo_list_types` | List the tag or audience taxonomy |
+| `qloo_recommend` | Rank entities for a known set of seed entities, tags or audiences |
 | `qloo_compare_tastes` | Compare two audiences |
 | `qloo_trending` | Interest over a date range |
 | `qloo_build_taste_profile` | Turn a description into an entity/tag profile |

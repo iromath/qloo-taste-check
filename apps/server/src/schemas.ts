@@ -36,6 +36,11 @@ export const recommendShape = {
   ),
   entities: z.array(entityId).max(20).optional().describe('Seed tastes as Qloo entity IDs — the taste graph signal.'),
   tags: z.array(tagId).max(20).optional().describe('Seed concepts as Qloo tag IDs.'),
+  audiences: z
+    .array(z.string().min(1))
+    .max(10)
+    .optional()
+    .describe('Audience UUIDs from qloo_search_audiences. Nudges the taste signal toward a demographic or lifestyle group.'),
   take: z.number().int().min(1).max(50).optional().describe('Number of recommendations (default 6 for the game).'),
   explain: z.boolean().optional().describe('Include per-result contributor scores (default true).'),
   sortBy: z.enum(SORT_MODES).optional().describe('Ranking mode. Default is affinity order.'),
@@ -64,6 +69,42 @@ export const trendingShape = {
     .max(20)
     .describe('Seed entities. Required by the endpoint: omitting it returns HTTP 400.'),
   take: z.number().int().min(1).max(50).optional(),
+};
+
+export const getEntitiesShape = {
+  ids: z
+    .array(entityId)
+    .min(1)
+    .max(20)
+    .describe('Qloo entity IDs. URNs such as `urn:entity:movie:<uuid>` are reduced to bare UUIDs automatically.'),
+};
+
+export const searchAudiencesShape = {
+  query: z.string().optional().describe('Free-text search across audience names, e.g. "music festival", "sneakerheads".'),
+  parentTypes: z
+    .array(z.string())
+    .max(5)
+    .optional()
+    .describe('Entity types the audience applies to, e.g. urn:entity:movie.'),
+  audienceTypes: z
+    .array(z.string())
+    .max(5)
+    .optional()
+    .describe('Audience types, e.g. urn:audience:leisure. Get valid values from qloo_list_types.'),
+  take: z.number().int().min(1).max(50).optional().describe('Maximum results (default 20, max 50).'),
+};
+
+export const listTypesShape = {
+  kind: z
+    .enum(['tag', 'audience'])
+    .optional()
+    .describe('Which taxonomy to list: tag types (default) or audience types.'),
+  type: z.string().optional().describe('Restrict to one exact type, e.g. urn:tag:genre:qloo.'),
+  parentTypes: z
+    .array(z.string())
+    .max(5)
+    .optional()
+    .describe('Restrict to types that apply to these entity types, e.g. urn:entity:movie.'),
 };
 
 export const profileShape = {
@@ -95,3 +136,6 @@ export type CompareInput = z.infer<z.ZodObject<typeof compareShape>>;
 export type TrendingInput = z.infer<z.ZodObject<typeof trendingShape>>;
 export type ProfileInput = z.infer<z.ZodObject<typeof profileShape>>;
 export type ExplainInput = z.infer<z.ZodObject<typeof explainShape>>;
+export type GetEntitiesInput = z.infer<z.ZodObject<typeof getEntitiesShape>>;
+export type SearchAudiencesInput = z.infer<z.ZodObject<typeof searchAudiencesShape>>;
+export type ListTypesInput = z.infer<z.ZodObject<typeof listTypesShape>>;

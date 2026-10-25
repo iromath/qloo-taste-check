@@ -108,6 +108,27 @@ export type QlooEntity = {
   why?: ExplainContribution[];
 };
 
+/** One audience from /v2/audiences, usable as `signal.demographics.audiences`. */
+export type QlooAudience = {
+  /** Qloo's audience UUID. */
+  entityId: string;
+  /** Slug-style ID, e.g. `urn:audience:leisure:music_festivals`. */
+  id: string;
+  name: string;
+  /** e.g. `urn:audience:leisure`. */
+  type?: string;
+  parents: { id?: string; name?: string; type?: string }[];
+  disambiguation?: string;
+};
+
+/** One row of /v2/tags/types or /v2/audiences/types. */
+export type QlooTypeNode = {
+  /** e.g. `urn:tag:genre:qloo` or `urn:audience:leisure`. */
+  type: string;
+  /** Entity (or audience) types this type applies to, e.g. `urn:entity:movie`. */
+  parents: string[];
+};
+
 export type QueryValue = string | number | boolean | string[] | undefined;
 
 /** Flat query-string model mirroring Qloo's dotted parameter names. */

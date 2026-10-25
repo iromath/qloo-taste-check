@@ -16,9 +16,15 @@ Qloo has no free-text search inside its recommendation endpoint. The reliable fl
 3. qloo_recommend — pass IDs, get a ranked list. Hits are sorted by Qloo affinity, returned per result as \`affinity\` (0–1).
 4. qloo_explain — turn a rank into a plain-language reason.
 
+Supporting tools, for the rest of the Qloo surface:
+- qloo_get_entities — turn entity IDs you already hold back into names, types and tags.
+- qloo_search_audiences — resolve a demographic or lifestyle group to an audience UUID, then pass it to qloo_recommend as \`audiences\`.
+- qloo_list_types — the tag and audience taxonomy behind every \`filter.*.types\` value.
+- qloo_compare_tastes, qloo_trending, qloo_build_taste_profile — overlap, time series, and free-text resolution.
+
 Rules that prevent most bad results:
 - Only nine entity types are valid for recommendations: artist, book, brand, destination, movie, person, place, podcast, tv_show. \`video_game\` is rejected by /v2/insights.
-- A recommendation needs at least one signal (entity ID or tag ID); \`filter.type\` alone returns HTTP 400.
+- A recommendation needs at least one signal (entity ID, tag ID or audience ID); \`filter.type\` alone returns HTTP 400.
 - Qloo validates strictly: unknown IDs, unsupported types and missing signals return HTTP 400 with a message naming the parameter. An empty bucket means a valid request matched nothing.
 - /v2/insights is GET-only and /search radius is in miles while /v2/insights radius is in metres.
 - Read qloo://reference/parameters and qloo://reference/tag-workflow when a call behaves unexpectedly.`;

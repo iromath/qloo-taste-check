@@ -1,17 +1,23 @@
 import { TtlCache } from './cache.js';
 import { QlooError } from './errors.js';
 import {
+  buildAudiencesQuery,
   buildCompareQuery,
+  buildEntitiesQuery,
   buildInsightsQuery,
   buildSearchQuery,
   buildTagsQuery,
   buildTrendingQuery,
+  buildTypeListQuery,
   toSearchParams,
+  type AudiencesParams,
   type CompareParams,
+  type EntitiesParams,
   type InsightsParams,
   type SearchParams,
   type TagsParams,
   type TrendingParams,
+  type TypeListParams,
 } from './params.js';
 import type { QlooEnvelope, QlooMeta, QlooQuery } from './types.js';
 
@@ -86,12 +92,27 @@ export class QlooClient {
     return this.call('/v2/analysis/compare', buildCompareQuery(params));
   }
 
-  /** Resolve entities by ID. The endpoint requires the `entity_ids` name. */
-  entities(ids: string[]): Promise<QlooCall> {
-    if (ids.length === 0) {
+  /** Resolve entities by ID. The endpoint requires bare UUIDs. */
+  entities(params: EntitiesParams): Promise<QlooCall> {
+    if (params.ids.length === 0) {
       return Promise.resolve({ data: { success: true, results: { entities: [] } }, meta: emptyMeta() });
     }
-    return this.call('/entities', { entity_ids: ids.join(',') });
+    return this.call('/entities', buildEntitiesQuery(params));
+  }
+
+  /** Audiences — usable as `signal.demographics.audiences` on /v2/insights. */
+  audiences(params: AudiencesParams): Promise<QlooCall> {
+    return this.call('/v2/audiences', buildAudiencesQuery(params));
+  }
+
+  /** Every tag type Qloo knows about, e.g. `urn:tag:genre:qloo`. */
+  tagTypes(params: TypeListParams): Promise<QlooCall> {
+    return this.call('/v2/tags/types', buildTypeListQuery(params));
+  }
+
+  /** Every audience type Qloo knows about, e.g. `urn:audience:leisure`. */
+  audienceTypes(params: TypeListParams): Promise<QlooCall> {
+    return this.call('/v2/audiences/types', buildTypeListQuery(params));
   }
 
   /** Escape hatch for documented params not modelled above. */

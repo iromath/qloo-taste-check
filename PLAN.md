@@ -94,12 +94,15 @@ Rank→bucket mapping (no numeric score exists): `top 2 = LOVE`, `middle 2 = MEH
 
 ---
 
-## 5. MCP tool surface (7 tools, 3 resources, 2 prompts)
+## 5. MCP tool surface (10 tools, 3 resources, 2 prompts)
 
 | Tool | Purpose |
 |---|---|
 | `qloo_search_entities` | name → entity IDs; `types`, location, radius |
 | `qloo_search_tags` | concept → tag IDs (required for `filter.tags`) |
+| `qloo_get_entities` | entity IDs → names/types/tags (`/entities`, bare UUIDs) |
+| `qloo_search_audiences` | group description → audience UUIDs (`/v2/audiences`) |
+| `qloo_list_types` | tag/audience taxonomy (`/v2/tags/types`, `/v2/audiences/types`) |
 | `qloo_recommend` | core: profile → ranked entities, normalized + `why[]` |
 | `qloo_compare_tastes` | A vs B taste overlap/divergence (`/v2/analysis/compare`) |
 | `qloo_trending` | rising interest for a type over a date window |
@@ -151,7 +154,7 @@ Key storage: global secret setting (`npx devvit settings set qlooApiKey`), never
 | Day | Work |
 |---|---|
 | **0 (today)** | Verify Qloo key (entity types, ordering, explainability, tags, compare, latency). Create Devvit app + `devvit.json` + `upload` → **starts domain review**. Create test subreddit. Attach TLS domain to the relay. Scaffold monorepo. |
-| **1** | `packages/qloo` + MCP server (7 tools) + deploy. Validate with a real MCP client. |
+| **1** | `packages/qloo` + MCP server (10 tools) + deploy. Validate with a real MCP client. |
 | **2** | Agentic web demo at `/`. Cache + rate-limit + error surfaces. |
 | **3** | Devvit game: round creation, voting, reveal, leaderboard. Playtest in the test subreddit. |
 | **4** | Mod dashboard. Polish, empty/error states, README + Fetch Domains section, Terms, Privacy, LICENSE (MIT). |
