@@ -41,7 +41,8 @@ Base URL: **https://hackathon.api.qloo.com**. Auth header: **\`X-Api-Key\`** (no
 ## Shape of every call
 
 - \`/v2/insights\` is **GET only**. All parameters are dotted names in the query string. A POST with a JSON body fails.
-- Array parameters are repeated keys: \`signal.interests.entities=ID1&signal.interests.entities=ID2\`. The bracketed \`signal.interests.entities[]=\` form is silently ignored.
+- Entity lists use repeated keys: \`signal.interests.entities=ID1&signal.interests.entities=ID2\`. The bracketed \`signal.interests.entities[]=\` form is silently ignored.
+- Tag and type lists must be a **single comma-joined value**: \`signal.interests.tags=TAG1,TAG2\`, \`filter.tags=TAG1,TAG2\`, \`filter.exclude.tags=TAG1,TAG2\`, \`signal.demographics.audiences=TAG1,TAG2\`, \`filter.parents.types=TYPE1,TYPE2\`, \`filter.tag.types=TYPE1,TYPE2\`. Repeating the key returns **HTTP 500** on /v2/insights and **HTTP 400** on /v2/tags.
 - **Validation is real.** Unknown entity IDs, unsupported \`filter.type\` values and a missing signal all return **HTTP 400** with a \`message\` naming the offending parameter. An empty \`results\` bucket therefore means a valid request matched nothing.
 - There is **no field selection**; responses are verbose. This server normalizes them before returning.
 

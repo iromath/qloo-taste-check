@@ -251,8 +251,23 @@ export function renderDemoPage(origin: string, ready: boolean): string {
       .map(([key, value]) => key + '=' + encodeURIComponent(Array.isArray(value) ? value.join(',') : value))
       .join('&');
     const res = await fetch(path + (qs ? '?' + qs : ''));
-    const json = await res.json();
-    if (!res.ok) throw json;
+    // A proxy in front of the relay can answer with text/plain, so never assume JSON.
+    const body = await res.text();
+    let json = null;
+    try { json = body ? JSON.parse(body) : null; } catch (_) { json = null; }
+
+    if (!res.ok) {
+      if (json && json.error) throw json;
+      throw {
+        error: {
+          kind: 'upstream_' + res.status,
+          message: body && body.length <= 160 ? body : 'The relay returned HTTP ' + res.status + ' with a non-JSON body.'
+        }
+      };
+    }
+    if (!json) {
+      throw { error: { kind: 'bad_response', message: 'The relay returned an unreadable body.' } };
+    }
     return json;
   }
 

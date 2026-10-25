@@ -3,9 +3,17 @@ import type { AgeBand, Gender, InsightsType, QlooQuery, QueryValue, SearchType, 
 /**
  * Serializes the flat dotted query model into URLSearchParams.
  *
- * Verified against the live API: repeated keys (`a=1&a=2`) are accepted
- * everywhere an array is accepted. The bracketed `a[]=` form is silently
- * ignored, so it is deliberately not supported.
+ * Verified against the live API, arrays come in two flavours:
+ *
+ * - Entity lists (`signal.interests.entities`) accept repeated keys
+ *   (`a=1&a=2`) and comma-joined values.
+ * - Tag and type lists (`signal.interests.tags`, `signal.demographics.audiences`,
+ *   `filter.tags`, `filter.exclude.tags`, `filter.parents.types`,
+ *   `filter.tag.types`) accept **only** a single comma-joined value. Repeating
+ *   the key yields HTTP 500 on `/v2/insights` and HTTP 400 on `/v2/tags`.
+ *
+ * The bracketed `a[]=` form is silently ignored on every endpoint, so it is
+ * deliberately not supported.
  */
 export function toSearchParams(query: QlooQuery): URLSearchParams {
   const params = new URLSearchParams();
@@ -23,6 +31,11 @@ function appendValue(params: URLSearchParams, key: string, value: QueryValue): v
     return;
   }
   params.append(key, String(value));
+}
+
+function joinList(values: string[] | undefined): string | undefined {
+  if (!values || values.length === 0) return undefined;
+  return values.join(',');
 }
 
 export function splitEntityType(subtype: string): { family: string; kind: string } | null {
@@ -82,14 +95,14 @@ export function buildInsightsQuery(p: InsightsParams): QlooQuery {
   const q: QlooQuery = {
     'filter.type': p.type,
     'signal.interests.entities': p.entities,
-    'signal.interests.tags': p.tags,
-    'signal.demographics.audiences': p.audiences,
+    'signal.interests.tags': joinList(p.tags),
+    'signal.demographics.audiences': joinList(p.audiences),
     'signal.demographics.audiences.weight': p.audiencesWeight?.map(String),
     'signal.demographics.age': p.age,
     'signal.demographics.gender': p.gender,
-    'filter.tags': p.filterTags,
+    'filter.tags': joinList(p.filterTags),
     'operator.filter.tags': p.filterTagsOperator,
-    'filter.exclude.tags': p.excludeTags,
+    'filter.exclude.tags': joinList(p.excludeTags),
     'filter.location.query': p.filterLocationQuery,
     'filter.location.id': p.filterLocationId,
     'filter.location.radius': p.filterLocationRadius,
@@ -180,9 +193,9 @@ export const TAGS_TAKE_MAX = 50;
 export function buildTagsQuery(p: TagsParams): QlooQuery {
   return compact({
     'filter.query': p.query,
-    'filter.tags': p.tags,
-    'filter.parents.types': p.parentTypes,
-    'filter.types': p.tagTypes,
+    'filter.tags': joinList(p.tags),
+    'filter.parents.types': joinList(p.parentTypes),
+    'filter.tag.types': joinList(p.tagTypes),
     'filter.popularity.min': clamp(p.minPopularity, 0, 1),
     'filter.popularity.max': clamp(p.maxPopularity, 0, 1),
     'filter.name': p.nameSearch,

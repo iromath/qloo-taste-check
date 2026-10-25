@@ -28,7 +28,8 @@ wants `entity_ids`, and the bracketed `a[]=` array form is silently ignored. Eve
 around what the API actually does:
 
 - `params.ts` emits only the documented parameter names, clamps numeric ranges, repeats keys for
-  arrays (the one form accepted everywhere) and comma-joins the compare lists.
+  entity lists, and comma-joins tag and type lists (the only form those endpoints accept, including
+  the compare lists).
 - `client.ts` caches responses, retries transient failures, and attaches a warning to the envelope
   when a valid request comes back with an empty bucket.
 - `normalize.ts` reads the buckets each endpoint really returns (`/search` is a bare array,
