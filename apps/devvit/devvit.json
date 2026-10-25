@@ -25,6 +25,10 @@
       "dashboard": {
         "entry": "dashboard.html",
         "height": "regular"
+      },
+      "foryou": {
+        "entry": "foryou.html",
+        "height": "tall"
       }
     }
   },
@@ -47,6 +51,13 @@
         "location": "subreddit",
         "endpoint": "/internal/menu/dashboard-post",
         "forUserType": "moderator"
+      },
+      {
+        "label": "See posts picked for your taste",
+        "description": "Opens the For You post: this subreddit’s posts ranked against your Taste Check votes.",
+        "location": "subreddit",
+        "endpoint": "/internal/menu/for-you-post",
+        "forUserType": "user"
       }
     ]
   },

@@ -13,9 +13,11 @@ import {
   toPublic,
   type StoredRound,
 } from './game.js';
+import { buildForYou, clearTaste, ensureForYouPost, readTaste, recordVotes } from './forYou.js';
 import { keyConfigured } from './qloo.js';
 
 const VERDICTS = new Set<string>(['LOVE', 'MEH', 'PASS']);
+const TASTE_VERDICTS = new Set<string>(['LOVE', 'PASS']);
 
 const app = new Hono();
 
@@ -205,6 +207,48 @@ app.post('/api/guess', async (c) => {
 
 app.get('/api/leaderboard', async (c) => c.json(await leaderboard(context.username, 10)));
 
+/* ------------------------------------------------------------------ */
+/* Personal taste profile + For You                                    */
+/* ------------------------------------------------------------------ */
+
+/** Only explicit LOVE / PASS taps are stored; the round's guesses say nothing about taste. */
+app.post('/api/taste', async (c) => {
+  const round = await resolveRound();
+  if (!round) return c.json(fail('not_found', 'No Taste Check round exists yet'), 404);
+
+  const body = await c.req
+    .json<{ votes?: { id?: unknown; verdict?: unknown }[] }>()
+    .catch(() => ({}) as { votes?: { id?: unknown; verdict?: unknown }[] });
+
+  const votes: { id: string; verdict: 'LOVE' | 'PASS' }[] = [];
+  for (const vote of body.votes ?? []) {
+    if (typeof vote.id !== 'string' || !TASTE_VERDICTS.has(String(vote.verdict))) continue;
+    votes.push({ id: vote.id, verdict: vote.verdict as 'LOVE' | 'PASS' });
+  }
+  if (votes.length === 0) {
+    return c.json(fail('invalid_input', 'Send at least one vote', 'Each vote needs an entity id and a LOVE or PASS verdict.'), 400);
+  }
+
+  const player = playerName();
+  await recordVotes(round, player, votes);
+  const stored = await readTaste(player);
+  return c.json({
+    ok: true,
+    saved: votes.length,
+    profile: {
+      loved: stored.filter((vote) => vote.verdict === 'LOVE').length,
+      passed: stored.filter((vote) => vote.verdict === 'PASS').length,
+    },
+  });
+});
+
+app.delete('/api/taste', async (c) => {
+  await clearTaste(playerName());
+  return c.json({ ok: true, profile: { loved: 0, passed: 0 } });
+});
+
+app.get('/api/for-you', async (c) => c.json(await buildForYou(playerName())));
+
 app.get('/api/dashboard', async (c) => {
   if (!(await isModerator())) {
     return c.json(fail('unauthorized', 'The dashboard is moderator-only', 'Open it from the mod tools menu.'), 403);
@@ -253,6 +297,19 @@ app.post('/internal/menu/dashboard-post', async (c) => {
   });
 
   return c.json({ navigateTo: post.permalink, showToast: 'Dashboard post created.' });
+});
+
+app.post('/internal/menu/for-you-post', async (c) => {
+  try {
+    const post = await ensureForYouPost();
+    return c.json({
+      navigateTo: post.permalink,
+      showToast: post.created ? 'For You post created.' : 'Opening the existing For You post.',
+    });
+  } catch (error) {
+    console.error('[taste-check] for-you post failed', error);
+    return c.json({ showToast: toastFor(error) });
+  }
 });
 
 // Hono falls back to the notFound handler when a route returns a falsy value, so

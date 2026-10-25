@@ -134,19 +134,91 @@
     if (answered === round.candidates.length) show(button); else hide(button);
   }
 
+  function candidateFor(id) {
+    var list = state.round && state.round.candidates ? state.round.candidates : [];
+    for (var i = 0; i < list.length; i += 1) if (list[i].id === id) return list[i];
+    return null;
+  }
+
+  async function saveTaste(id, verdict, card) {
+    var picks = card.querySelector('.taste-picks');
+    var buttons = picks.querySelectorAll('.pick');
+    for (var i = 0; i < buttons.length; i += 1) {
+      buttons[i].disabled = true;
+      buttons[i].classList.toggle('on', buttons[i].dataset.verdict === verdict);
+    }
+    try {
+      await getJson('/api/taste', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ votes: [{ id: id, verdict: verdict }] })
+      });
+      card.querySelector('.taste-note').textContent = verdict === 'LOVE'
+        ? 'Saved. Your For You ranking will pull towards this.'
+        : 'Saved. This one will not seed your For You ranking.';
+    } catch (error) {
+      card.querySelector('.taste-note').textContent = error.message;
+      for (var j = 0; j < buttons.length; j += 1) buttons[j].disabled = false;
+    }
+  }
+
   function renderReveal(result) {
     el('score').textContent = result.score;
     el('score-of').textContent = 'of ' + (result.total || result.answers.length);
     var container = el('reveal');
     container.innerHTML = '';
     result.answers.forEach(function (answer) {
+      var candidate = candidateFor(answer.candidateId);
       var card = document.createElement('div');
       card.className = 'card';
-      card.innerHTML =
-        '<div class="reveal"><span class="tag ' + answer.verdict + '">' + answer.verdict + '</span>' +
+
+      if (candidate) {
+        var head = document.createElement('div');
+        head.className = 'card-head';
+        var name = document.createElement('div');
+        name.className = 'card-name';
+        name.textContent = candidate.name;
+        var meta = document.createElement('div');
+        meta.className = 'card-meta';
+        meta.textContent = (candidate.subtitle || candidate.type || '').replace('urn:entity:', '');
+        head.appendChild(name);
+        head.appendChild(meta);
+        card.appendChild(head);
+      }
+
+      var line = document.createElement('div');
+      line.className = 'reveal';
+      line.innerHTML =
+        '<span class="tag ' + answer.verdict + '">' + answer.verdict + '</span>' +
         '<span class="tag ' + (answer.correct ? 'hit' : 'miss') + '">' + (answer.correct ? 'correct' : 'wrong') + '</span>' +
-        '<b>Rank ' + answer.rank + ' / ' + answer.total + '</b></div>' +
-        '<div class="reveal">' + answer.reason + '</div>';
+        '<b>Rank ' + answer.rank + ' / ' + answer.total + '</b>';
+      card.appendChild(line);
+
+      var reason = document.createElement('div');
+      reason.className = 'reveal';
+      reason.textContent = answer.reason;
+      card.appendChild(reason);
+
+      if (candidate) {
+        var taste = document.createElement('div');
+        taste.className = 'picks taste-picks';
+        taste.style.gridTemplateColumns = '1fr 1fr';
+        ['LOVE', 'PASS'].forEach(function (verdict) {
+          var button = document.createElement('button');
+          button.className = 'pick';
+          button.dataset.verdict = verdict;
+          button.textContent = verdict === 'LOVE' ? 'I love this' : 'Not for me';
+          button.addEventListener('click', function () { saveTaste(candidate.id, verdict, card); });
+          taste.appendChild(button);
+        });
+        card.appendChild(taste);
+
+        var note = document.createElement('div');
+        note.className = 'reveal taste-note';
+        note.textContent = 'Tell Taste Check what you actually like — this feeds your For You ranking.';
+        card.appendChild(note);
+      }
+
       container.appendChild(card);
     });
     hide(el('board-view'));

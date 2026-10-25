@@ -406,7 +406,18 @@ function readExplainability(value: unknown): ExplainContribution[] {
 
   if (isObject(value)) {
     const nested = isObject(value.contributions) ? value.contributions : value;
-    return readExplainability(Object.entries(nested).map(([id, score]) => ({ id, score })));
+    // Live /v2/insights shape: { "signal.interests.entities": [{ entity_id, score }] }.
+    // The key names the signal, not an entity, so recurse into non-scalar values.
+    const out: ExplainContribution[] = [];
+    for (const [key, inner] of Object.entries(nested)) {
+      if (Array.isArray(inner) || isObject(inner)) {
+        out.push(...readExplainability(inner));
+        continue;
+      }
+      const score = asNumber(inner);
+      if (score !== undefined) out.push({ entityId: key, score });
+    }
+    return out.sort((a, b) => b.score - a.score);
   }
 
   return [];

@@ -441,7 +441,7 @@ function pickAcrossBands(items: QlooEntity[], count: number, rng: () => number):
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
-function cleanTitle(raw: string): string {
+export function cleanTitle(raw: string): string {
   return raw
     .replace(/\[[^\]]*\]/g, ' ')
     .replace(/\([^)]*\)/g, ' ')
