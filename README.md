@@ -54,6 +54,10 @@ npm start                     # http://localhost:8787
 | `GET /` | Browser demo of the engine |
 | `GET /terms`, `GET /privacy` | Public Terms and Privacy pages |
 
+**Live endpoint: `https://qloo-mcp.globie.earth/mcp`** — the server is self-hosted as a Docker
+container (`tradex367/qloo_mcp:0.1.0`) behind TLS on a bare hostname, so it can be added to an MCP
+client directly. `GET https://qloo-mcp.globie.earth/health` reports whether a Qloo key is loaded.
+
 ### Deploy
 
 The server is a single Node process with no database — any container host works.
@@ -92,7 +96,7 @@ Connect any MCP client with a config like:
 ```json
 {
   "mcpServers": {
-    "taste-engine": { "type": "http", "url": "https://your-host.example/mcp" }
+    "taste-engine": { "type": "http", "url": "https://qloo-mcp.globie.earth/mcp" }
   }
 }
 ```
@@ -146,7 +150,8 @@ Devvit requires every outbound host to be declared explicitly in `devvit.json` a
 
 | Domain | Why |
 | --- | --- |
-| `hackathon.api.qloo.com` | The Qloo API. The app's entire game content — which titles are related to a subreddit's posts, and how they rank — comes from `/v2/insights` and `/search` on this host. Nothing is fabricated locally; if this host is unreachable the app shows an error rather than inventing a round. |
+| `hackathon.api.qloo.com` | The Qloo API, and the host the game actually calls. The app's entire game content — which titles are related to a subreddit's posts, and how they rank — comes from `/v2/insights` and `/search` here. Nothing is fabricated locally; if this host is unreachable the app shows an error rather than inventing a round. |
+| `qloo-mcp.globie.earth` | Optional second path: the self-hosted MCP/REST server in this repo, which proxies the same Qloo API. Declared for parity with the hosted server; the Devvit game does not depend on it, so its review outcome cannot break the app. |
 
 `https://hackathon.api.qloo.com` is a public, documented API with a published OpenAPI reference
 (Qloo's developer documentation) and key-based authentication. The app holds no other outbound
