@@ -125,7 +125,7 @@ function noticeFor(error: unknown): Notice {
       return {
         title: 'Taste Check — waiting for Reddit to approve Qloo access',
         reason:
-          "Reddit has not approved this app's request to reach hackathon.api.qloo.com, and Devvit blocks outbound requests to domains that are not on the allowlist.",
+          'Reddit has not approved this app\'s request to reach its Qloo domains (qloo-mcp.globie.earth, hackathon.api.qloo.com), and Devvit blocks outbound requests to hosts that are not on the allowlist.',
         hint:
           "Nothing to fix in the code: the request is queued under Domain exceptions in the app's developer settings and is normally reviewed in 1–2 business days.",
       };
@@ -147,7 +147,7 @@ function noticeFor(error: unknown): Notice {
 /** Menu toasts are one line, so they surface the actionable part of the failure only. */
 function toastFor(error: unknown): string {
   if (error instanceof QlooError && error.kind === 'network') {
-    return 'Qloo is blocked until Reddit approves hackathon.api.qloo.com. Retry once the domain review clears.';
+    return 'Qloo is blocked until Reddit approves qloo-mcp.globie.earth and hackathon.api.qloo.com. Retry once the domain review clears.';
   }
   return error instanceof Error ? error.message : 'The round could not be built. Check the app logs.';
 }

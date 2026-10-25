@@ -66,7 +66,7 @@
       "qlooApiKey": {
         "type": "string",
         "label": "Qloo API key",
-        "helpText": "Key for https://hackathon.api.qloo.com. Stored as a secret; never shipped to the client.",
+        "helpText": "Key for https://hackathon.api.qloo.com, or for the self-hosted relay at https://qloo-mcp.globie.earth. Stored as a secret; never shipped to the client.",
         "isSecret": true
       }
     }
