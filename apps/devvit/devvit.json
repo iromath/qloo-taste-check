@@ -5,7 +5,8 @@
     "http": {
       "enable": true,
       "domains": [
-        "hackathon.api.qloo.com"
+        "hackathon.api.qloo.com",
+        "qloo-mcp.globie.earth"
       ]
     },
     "redis": true,
