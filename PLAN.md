@@ -129,8 +129,9 @@ Design rules: every tool returns the same normalized envelope (`hits[]`, `profil
 
 ### Devvit config
 ```jsonc
-"permissions": { "reddit": true, "http": { "enable": true, "domains": ["hackathon.api.qloo.com"] } },
-"post": { "dir": "dist/client", "entrypoints": { "game": {...}, "dashboard": {...} } }
+"permissions": { "reddit": true, "redis": true,
+  "http": { "enable": true, "domains": ["qloo-mcp.globie.earth", "hackathon.api.qloo.com"] } },
+"post": { "dir": "public", "entrypoints": { "default": {...}, "game": {...}, "dashboard": {...} } }
 ```
 Redis keys: `profile:{sub}`, `round:{id}`, `round:{id}:votes`, `leaderboard`, `streak:{user}`.
 Key storage: global secret setting (`npx devvit settings set qlooApiKey`), never in the bundle.
