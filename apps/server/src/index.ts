@@ -42,13 +42,20 @@ app.route('/api', createApi(ctx));
 
 app.get('/', (c) => c.html(renderDemoPage(new URL(c.req.url).origin, ctx.qloo !== null)));
 
-for (const [route, file] of [['/terms', 'TERMS.md'], ['/privacy', 'PRIVACY.md']] as const) {
-  app.get(route, (c) => {
-    const html = renderLegalPage(file);
-    return html === null
-      ? c.json({ error: { kind: 'not_found', message: `${file} is missing from the deployment` } }, 404)
-      : c.html(html);
-  });
+const LEGAL_DOCS = [
+  { file: 'TERMS.md', paths: ['/terms', '/terms.html', '/TERMS.html'] },
+  { file: 'PRIVACY.md', paths: ['/privacy', '/privacy.html', '/PRIVACY.html'] },
+] as const;
+
+for (const doc of LEGAL_DOCS) {
+  for (const path of doc.paths) {
+    app.get(path, (c) => {
+      const html = renderLegalPage(doc.file);
+      return html === null
+        ? c.json({ error: { kind: 'not_found', message: `${doc.file} is missing from the deployment` } }, 404)
+        : c.html(html);
+    });
+  }
 }
 
 app.notFound((c) => c.json({ error: { kind: 'not_found', message: `No route for ${c.req.method} ${new URL(c.req.url).pathname}`, hint: 'Try /, /health, /mcp or /api/capabilities.' } }, 404));

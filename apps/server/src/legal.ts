@@ -109,6 +109,13 @@ function renderMarkdown(md: string): string {
       continue;
     }
 
+    // An indented line under a bullet is that bullet still wrapping.
+    const last = list.length - 1;
+    if (last >= 0 && /^\s{2,}\S/.test(line)) {
+      list[last] = `${list[last] ?? ''} ${line.trim()}`;
+      continue;
+    }
+
     flushList();
     paragraph.push(line.trim());
   }
@@ -124,53 +131,84 @@ function page(title: string, body: string): string {
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>${esc(title)} — Taste Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600&family=IBM+Plex+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" />
 <style>
-  :root {
-    --ink: #0d0c0f; --line: #2b2733; --text: #ece8f2; --muted: #9c94ab;
-    --accent: #c084fc; --accent-2: #f0abfc;
-    --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
-  }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
-  body {
-    background:
-      radial-gradient(900px 500px at 15% -10%, rgba(192,132,252,.16), transparent 60%),
-      var(--ink);
-    color: var(--text); font-family: var(--font); line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-  }
-  a { color: var(--accent-2); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  .wrap { max-width: 760px; margin: 0 auto; padding: 0 24px 80px; }
-  header.site {
-    display: flex; align-items: center; justify-content: space-between; gap: 16px;
-    padding: 22px 0; border-bottom: 1px solid var(--line);
-  }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
-  .back { font: 500 12px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
-  h1 { font-size: clamp(30px, 5vw, 42px); line-height: 1.1; letter-spacing: -.03em; margin: 48px 0 8px; }
-  h2 { font-size: 20px; letter-spacing: -.01em; margin: 38px 0 10px; }
-  h3 { font-size: 16px; margin: 26px 0 8px; }
-  p { color: var(--muted); margin: 0 0 14px; }
-  ul { color: var(--muted); margin: 0 0 16px; padding-left: 22px; }
-  li { margin-bottom: 6px; }
-  code { font: 500 12px/1.4 var(--mono); background: #1d1a22; border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; }
-  table { width: 100%; border-collapse: collapse; margin: 8px 0 20px; font-size: 14px; }
-  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  th { font: 600 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-  td { color: var(--muted); }
+/* Hallmark · shape: 05 Workbench · genre: modern-minimal · theme: Cobalt · surface: legal document
+ * A quiet sibling of the landing page: hairline masthead, one column of prose, no keys. */
+:root {
+  color-scheme: light;
+  --space-3xs: 2px; --space-2xs: 4px; --space-xs: 8px; --space-sm: 12px; --space-md: 16px; --space-lg: 24px; --space-xl: 40px; --space-2xl: 64px; --space-3xl: 96px;
+  --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.25rem; --text-xl: 1.5625rem; --text-display-s: clamp(2.25rem, 4vw + 0.5rem, 3.75rem);
+  --color-paper: oklch(98.6% 0.005 250);
+  --color-ink: oklch(21% 0.028 262); --color-ink-2: oklch(36% 0.022 260); --color-muted: oklch(50% 0.018 258);
+  --color-rule: oklch(90% 0.009 252); --color-rule-2: oklch(83% 0.012 252);
+  --color-accent: oklch(52% 0.19 258); --color-accent-deep: oklch(43% 0.2 262);
+  --color-key-face: oklch(99.4% 0.003 250);
+  --font-display: "Familjen Grotesk", system-ui, sans-serif; --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-outlier: "JetBrains Mono", ui-monospace, monospace;
+  --radius-input: 6px; --rule-hair: 1px; --gutter: 64px;
+  --tracking-display: -0.028em;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+html { overflow-x: clip; }
+body { background: var(--color-paper); color: var(--color-ink); font-family: var(--font-body); font-size: var(--text-md); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+::selection { background: color-mix(in oklab, var(--color-accent) 22%, transparent); }
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 0.16em; text-decoration-color: var(--color-rule-2); }
+a:hover { text-decoration-color: var(--color-accent); }
+h1, h2, h3 { margin: 0; font-family: var(--font-display); font-weight: 600; font-synthesis: none; letter-spacing: var(--tracking-display); line-height: 1.1; text-wrap: balance; }
+.container { width: 100%; max-width: 72rem; margin-inline: auto; padding-inline: var(--gutter); }
+
+.site { border-bottom: var(--rule-hair) solid var(--color-rule); }
+.masthead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); min-height: var(--space-3xl); }
+.wordmark { font-family: var(--font-display); font-weight: 600; font-size: var(--text-lg); letter-spacing: var(--tracking-display); text-decoration: none; }
+.back { font-family: var(--font-display); font-weight: 500; font-size: var(--text-sm); color: var(--color-muted); }
+
+.doc { max-width: 44rem; padding-block: var(--space-2xl) var(--space-3xl); }
+.doc h1 { font-size: var(--text-display-s); max-width: 20ch; }
+.doc h2 { margin-top: var(--space-xl); padding-top: var(--space-md); border-top: var(--rule-hair) solid var(--color-rule); font-size: var(--text-xl); }
+.doc h3 { margin-top: var(--space-lg); font-size: var(--text-lg); }
+.doc p { margin: 0 0 var(--space-sm); color: var(--color-ink-2); max-width: 66ch; }
+.doc h1 + p { margin-top: var(--space-lg); color: var(--color-ink-2); font-size: var(--text-lg); line-height: 1.45; max-width: 52ch; }
+.doc ul { margin: 0 0 var(--space-md); padding-left: var(--space-lg); color: var(--color-ink-2); }
+.doc li { margin-bottom: var(--space-2xs); }
+.doc li::marker { color: var(--color-rule-2); }
+.doc code { font: 400 var(--text-sm)/1.4 var(--font-outlier); background: var(--color-key-face); border: var(--rule-hair) solid var(--color-rule-2); border-radius: var(--radius-input); padding: 1px 5px; color: var(--color-ink); }
+.doc table { width: 100%; border-collapse: collapse; margin: var(--space-sm) 0 var(--space-lg); font-size: var(--text-sm); }
+.doc th { padding: var(--space-xs) var(--space-sm); text-align: left; font-family: var(--font-display); font-weight: 500; color: var(--color-muted); border-bottom: var(--rule-hair) solid var(--color-rule-2); }
+.doc td { padding: var(--space-xs) var(--space-sm); vertical-align: top; color: var(--color-ink-2); border-bottom: var(--rule-hair) solid var(--color-rule); }
+.doc td:first-child { white-space: nowrap; }
+
+footer { border-top: var(--rule-hair) solid var(--color-rule); padding-block: var(--space-lg) var(--space-2xl); }
+.foot { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-md); font-size: var(--text-sm); color: var(--color-muted); }
+.foot-links { display: flex; flex-wrap: wrap; gap: var(--space-lg); }
+.foot-links a { text-decoration-color: var(--color-rule-2); }
+.foot-links a:hover { text-decoration-color: var(--color-accent); }
+
+@media (max-width: 40rem) { :root { --gutter: 16px; } .doc { padding-block: var(--space-xl) var(--space-2xl); } }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="site">
-    <span class="brand"><span class="dot"></span>Taste Engine</span>
+<header class="site">
+  <div class="container masthead">
+    <a class="wordmark" href="/">Taste Engine</a>
     <a class="back" href="/">Back to the demo</a>
-  </header>
+  </div>
+</header>
+<main class="container">
+  <article class="doc">
   ${body}
-</div>
+  </article>
+</main>
+<footer>
+  <div class="container foot">
+    <span>Taste Engine. Built for the Qloo Agentic Hackathon. MIT licensed.</span>
+    <span class="foot-links"><a href="/terms">Terms</a><a href="/privacy">Privacy</a></span>
+  </div>
+</footer>
 </body>
 </html>`;
 }
