@@ -1,5 +1,5 @@
 (function () {
-  var PALETTE = { LOVE: '#4ade80', MEH: '#facc15', PASS: '#94a3b8' };
+  var PALETTE = { LOVE: 'var(--color-accent)', MEH: 'var(--color-glyph-3)', PASS: 'var(--color-muted)' };
   var VERDICTS = ['LOVE', 'MEH', 'PASS'];
   var state = { round: null, guesses: {} };
 

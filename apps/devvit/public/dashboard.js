@@ -1,5 +1,5 @@
 (function () {
-  var COLORS = { LOVE: '#4ade80', MEH: '#facc15', PASS: '#94a3b8' };
+  var COLORS = { LOVE: 'var(--color-accent)', MEH: 'var(--color-glyph-3)', PASS: 'var(--color-muted)' };
   var el = function (id) { return document.getElementById(id); };
   function show(node) { node.classList.remove('hidden'); }
 

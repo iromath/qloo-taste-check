@@ -1,0 +1,27 @@
+[
+ {
+  "mode": "redesign",
+  "depth": "full",
+  "scope": "site",
+  "shape": "05 Workbench (public page) + app screens (webviews)",
+  "theme": "cobalt",
+  "axes": "light/grotesk-sans/cool 256",
+  "hero": "Counter — display head beside the live taste-check bench",
+  "nav": "hairline masthead, rule and keycaps",
+  "footer": "hairline strip, one call",
+  "imagery": "the product — no photographs",
+  "entry": "cold open on the claim, the bench above the fold",
+  "fingerprint": "counter-hero+bench+ledger+cobalt-keycaps",
+  "sections": [
+   "Hero (counters + bench)",
+   "Live taste check",
+   "Ten tools",
+   "Connect an agent",
+   "Close"
+  ],
+  "signature": "the run key: six names in, a real Qloo ranking out, in place",
+  "prompt": "analyze and appy design skill to improve our project",
+  "redesign": "full redesign of the public page and the four Reddit webviews into one Cobalt system",
+  "date": "2026-10-26"
+ }
+]
