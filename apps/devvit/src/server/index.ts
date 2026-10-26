@@ -281,9 +281,18 @@ app.post('/internal/menu/new-round', async (c) => {
   }
 });
 
-app.post('/internal/menu/dashboard-post', async (c) => {
-  if (!(await isModerator())) {
-    return c.json({ showToast: 'Only moderators can post the dashboard.' });
+const DASHBOARD_POST_KEY = 'post:dashboard';
+
+/** One moderator dashboard post per subreddit: re-running the menu item reopens it. */
+async function ensureDashboardPost(): Promise<{ permalink: string; created: boolean }> {
+  const existing = await redis.get(DASHBOARD_POST_KEY);
+  if (existing) {
+    try {
+      const post = await reddit.getPostById(existing as `t3_${string}`);
+      return { permalink: post.permalink, created: false };
+    } catch {
+      await redis.del(DASHBOARD_POST_KEY);
+    }
   }
 
   const post = await reddit.submitCustomPost({
@@ -295,15 +304,27 @@ app.post('/internal/menu/dashboard-post', async (c) => {
     },
     userGeneratedContent: { text: 'Moderator dashboard for the Taste Check game.' },
   });
+  await redis.set(DASHBOARD_POST_KEY, post.id);
+  return { permalink: post.permalink, created: true };
+}
 
-  return c.json({ navigateTo: post.permalink, showToast: 'Dashboard post created.' });
+app.post('/internal/menu/dashboard-post', async (c) => {
+  if (!(await isModerator())) {
+    return c.json({ showToast: 'Only moderators can post the dashboard.' });
+  }
+
+  const post = await ensureDashboardPost();
+  return c.json({
+    navigateTo: `https://www.reddit.com${post.permalink}`,
+    showToast: post.created ? 'Dashboard post created.' : 'Opening the existing dashboard post.',
+  });
 });
 
 app.post('/internal/menu/for-you-post', async (c) => {
   try {
     const post = await ensureForYouPost();
     return c.json({
-      navigateTo: post.permalink,
+      navigateTo: `https://www.reddit.com${post.permalink}`,
       showToast: post.created ? 'For You post created.' : 'Opening the existing For You post.',
     });
   } catch (error) {

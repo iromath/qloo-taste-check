@@ -1,0 +1,192 @@
+(function () {
+  var el = function (id) { return document.getElementById(id); };
+
+  function show(node) { node.classList.remove('hidden'); }
+  function hide(node) { node.classList.add('hidden'); }
+
+  function fail(message) {
+    var err = el('err');
+    err.textContent = message;
+    show(err);
+    el('status').textContent = 'unavailable';
+    el('status').className = 'pill warn';
+  }
+
+  async function getJson(url, options) {
+    var res = await fetch(url, options);
+    var body = await res.json().catch(function () { return null; });
+    if (!res.ok) {
+      var detail = body && body.error ? body.error.message : 'Request failed (' + res.status + ')';
+      var hint = body && body.error && body.error.hint ? ' ' + body.error.hint : '';
+      throw new Error(detail + hint);
+    }
+    return body;
+  }
+
+  function subtype(entity) {
+    var raw = entity.subtype || entity.type || '';
+    return raw.replace('urn:entity:', '').replace(/_/g, ' ');
+  }
+
+  function percent(score) {
+    var value = typeof score === 'number' ? score : 0;
+    return Math.round(Math.max(0, Math.min(1, value)) * 100) + '%';
+  }
+
+  function renderKpis(data) {
+    var container = el('kpis');
+    var loved = data.profile ? data.profile.loved : 0;
+    var passed = data.profile ? data.profile.passed : 0;
+    var rows = [
+      { value: loved, label: 'loved' },
+      { value: passed, label: 'passed' },
+      { value: data.scanned, label: 'posts read' },
+      { value: data.matched, label: 'matched' }
+    ];
+    container.innerHTML = '';
+    rows.forEach(function (row) {
+      var kpi = document.createElement('div');
+      kpi.className = 'kpi';
+      var b = document.createElement('b');
+      b.textContent = String(row.value);
+      var span = document.createElement('span');
+      span.textContent = row.label;
+      kpi.appendChild(b);
+      kpi.appendChild(span);
+      container.appendChild(kpi);
+    });
+  }
+
+  function renderSeeds(data) {
+    var container = el('seeds');
+    container.innerHTML = '';
+    if (!data.seeds || data.seeds.length === 0) {
+      container.innerHTML = data.source === 'community'
+        ? 'No round exists yet, so there is nothing to seed from.'
+        : 'No likes stored yet. Tap LOVE on any round’s reveal and this page becomes yours.';
+      return;
+    }
+    var prefix = document.createElement('span');
+    prefix.textContent = data.source === 'community'
+      ? 'Cold start: seeded from this subreddit’s current round. '
+      : 'Seeded from your likes: ';
+    container.appendChild(prefix);
+    data.seeds.forEach(function (seed) {
+      var chip = document.createElement('span');
+      chip.className = 'tag LOVE';
+      chip.textContent = seed.name;
+      container.appendChild(chip);
+    });
+  }
+
+  function renderPicks(data) {
+    var container = el('picks');
+    container.innerHTML = '';
+
+    if (!data.picks || data.picks.length === 0) {
+      var empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = data.seeds && data.seeds.length > 0
+        ? 'No post in the hot list landed inside your neighbourhood this time. Try Refresh in a few minutes.'
+        : 'Nothing to rank yet.';
+      container.appendChild(empty);
+      return;
+    }
+
+    data.picks.forEach(function (pick, index) {
+      var card = document.createElement('div');
+      card.className = 'card';
+
+      var head = document.createElement('div');
+      head.className = 'card-head';
+
+      var name = document.createElement('div');
+      name.className = 'card-name';
+      var link = document.createElement('a');
+      link.href = 'https://www.reddit.com' + pick.permalink;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = pick.title;
+      name.appendChild(link);
+
+      var meta = document.createElement('div');
+      meta.className = 'card-meta';
+      meta.textContent = '#' + (index + 1);
+
+      head.appendChild(name);
+      head.appendChild(meta);
+      card.appendChild(head);
+
+      var match = document.createElement('div');
+      match.className = 'reveal';
+      var tag = document.createElement('span');
+      tag.className = 'tag LOVE';
+      tag.textContent = subtype(pick.entity);
+      match.appendChild(tag);
+      var strong = document.createElement('b');
+      strong.textContent = pick.entity.name;
+      match.appendChild(strong);
+      var score = document.createElement('span');
+      score.textContent = ' · ' + (typeof pick.affinity === 'number'
+        ? 'affinity ' + pick.affinity.toFixed(2)
+        : 'rank score ' + percent(pick.score));
+      match.appendChild(score);
+      card.appendChild(match);
+
+      if (pick.why && pick.why.length > 0) {
+        var why = document.createElement('div');
+        why.className = 'reveal';
+        why.textContent = 'because you loved ' + pick.why.map(function (item) {
+          return item.name + ' (' + item.score.toFixed(2) + ')';
+        }).join(', ');
+        card.appendChild(why);
+      }
+
+      container.appendChild(card);
+    });
+  }
+
+  function render(data) {
+    renderKpis(data);
+    renderSeeds(data);
+    renderPicks(data);
+
+    el('headline').textContent = data.source === 'community'
+      ? 'This subreddit’s posts, ranked for a cold start'
+      : 'Posts picked for your taste';
+    el('sub').textContent = data.source === 'community'
+      ? 'You have no likes yet, so this uses the current round’s seeds. Play a round and tap LOVE to make it personal.'
+      : 'Hot posts in this subreddit, re-ranked by Qloo against the entities you loved.';
+    el('status').textContent = data.source === 'community' ? 'cold start' : 'personal';
+    el('status').className = 'pill ok';
+    hide(el('err'));
+  }
+
+  async function load() {
+    el('status').textContent = 'loading';
+    el('status').className = 'pill';
+    try {
+      render(await getJson('/api/for-you'));
+    } catch (error) {
+      fail(error.message);
+    }
+  }
+
+  async function reset() {
+    var button = el('reset');
+    button.disabled = true;
+    try {
+      await getJson('/api/taste', { method: 'DELETE' });
+      await load();
+    } catch (error) {
+      fail(error.message);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  el('refresh').addEventListener('click', function () { load(); });
+  el('reset').addEventListener('click', reset);
+
+  load();
+})();
