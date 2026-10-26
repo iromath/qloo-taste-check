@@ -53,7 +53,7 @@ npm start                     # http://localhost:8787
 | `GET /health` | Liveness + whether a Qloo key is configured |
 | `GET /api/*` | GET-only REST facade mirroring the tools |
 | `GET /` | Browser demo of the engine |
-| `GET /terms`, `GET /privacy` | Public Terms and Privacy pages |
+| `GET /terms`, `GET /privacy` | Public Terms and Privacy pages (also served as `.html` aliases) |
 
 **Live endpoint: `https://qloo-mcp.globie.earth/mcp`** — the server is self-hosted as a Docker
 container (`tradex367/qloo_mcp:0.1.0`) behind TLS on a bare hostname, so it can be added to an MCP
